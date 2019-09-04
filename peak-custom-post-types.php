@@ -35,19 +35,10 @@ function pk_create_options_menu() {
 		__('Custom Post Types', 'peak-theme'),
 		'manage_options',
 		'pk-custom-post-types',
-		'pk_toplevel_page'
+		'pk_toplevel_page',
+		null,
+		5
  	);
-
-	// add_submenu_page(
-	// 	'pk-custom-post-types-handle',
-	// 	__('PEAK Custom Post Types Subenu', 'peak-theme'),
-	// 	__('Add New Post Type', 'peak-theme'),
-	// 	'manage_options',
-	// 	'pk-custom-post-types-submenu-1',
-	// 	'pk_submenu_page'
-	// );
-
-	// add_action( 'admin_init', 'pk_register_plugin_settings');
 
 }
 add_action( 'admin_menu', 'pk_create_options_menu', 10);
@@ -117,17 +108,16 @@ function pk_toplevel_page() {
 	// NOTE: does this need better checking?
 	if ( isset( $_POST[ 'delete-item' ] ) ) {
 
-	 // get index of selected item
-	 $i = $_POST[ 'deleted-item-index' ];
+		// get index of selected item
+	 	$i = $_POST[ 'deleted-item-index' ];
 
-	 $custom_post_types_data = get_option( $pk_custom_post_types_options );
+	 	$custom_post_types_data = get_option( $pk_custom_post_types_options );
 
-	// remove array item at $i
-	// NOTE: could put this in an array
-	unset( $custom_post_types_data[ $i] );
-	$custom_post_types_data = array_values( $custom_post_types_data );
+		// remove array item at $i
+		unset( $custom_post_types_data[ $i] );
+		$custom_post_types_data = array_values( $custom_post_types_data );
 
-	update_option( $pk_custom_post_types_options, $custom_post_types_data );
+		update_option( $pk_custom_post_types_options, $custom_post_types_data );
 
 	}
 
@@ -173,7 +163,7 @@ function pk_toplevel_page() {
 
 		 <!-- submit button -->
 		 <p class="submit">
-			 <input type="submit" name="Submit" class="button-primary button" value="<?php esc_attr_e( 'Create Custom Post Type', 'peak-theme'); ?>">
+			 <input type="submit" name="Submit" class="button-primary button" value="<?php esc_attr_e( 'Create Custom Post Type', 'peak-theme'); ?>" onclick="window.location.reload();">
 		 </p>
 
 	 </form>
@@ -185,31 +175,34 @@ function pk_toplevel_page() {
 	if ( ! get_option( $pk_custom_post_types_options ) ) {
 		echo '<p class="description">No custom post types yet!</p>';
 	} else {
-	$custom_post_types_data = get_option( $pk_custom_post_types_options );
 
-	// loop over array
-	echo '<h3>Created Post Types:</h3>';
-	echo '<ul class="list">';
+		$custom_post_types_data = get_option( $pk_custom_post_types_options );
 
-	// NOTE: put this in a function
-	$index = 0;
-	foreach ($custom_post_types_data as $post_type) {
-	foreach ($post_type as $key => $value) {
-		if ( $key == $post_type_name ) {
-			echo
-			'<li data-attr-index="'.$index.'">'
-				.$post_type[$post_type_name].
-				' <span>('.$post_type[$post_type_taxonomy].')</span>'.
-				'<form method="post" action="" class="alignright">
-					<input type="hidden" name="deleted-item-index" value="'.$index.'" />
-					<input type="submit" name="delete-item" value="X" onclick="return confirm(\'Are you sure you want to delete this post type?\')">
-				</form>
-			</li>';
+		// loop over array
+		echo '<h3>Created Post Types:</h3>';
+		echo '<ul class="list">';
+
+		// NOTE: put this in a function
+		$index = 0;
+		foreach ($custom_post_types_data as $post_type) {
+			foreach ($post_type as $key => $value) {
+
+				if ( $key == $post_type_name ) {
+					echo
+					'<li data-attr-index="'.$index.'" class="pk-post-type-list-item">'
+						.$post_type[$post_type_name].
+						' <span>('.$post_type[$post_type_taxonomy].')</span>'.
+						'<form method="post" action="" class="alignright">
+							<input type="hidden" name="deleted-item-index" value="'.$index.'" />
+							<input type="submit" name="delete-item" value="X" onclick="return confirm(\'Are you sure you want to delete this post type?\')">
+						</form>
+					</li>';
+				}
+			}
+			$index++;
+
 		}
-	}
-	$index++;
-	}
-	echo '</ul>';
+		echo '</ul>';
 	}
 
 	// end div class="wrap"
@@ -218,9 +211,9 @@ function pk_toplevel_page() {
 } // end of: pk_toplevel_page
 
 /*
- * Create the post type and optional custom taxonomy
+ * Register custom post types and optional custom taxonomies
  */
-function pk_create_custom_post_type() {
+function pk_create_custom_post_types() {
 
 	global $pk_custom_post_types_options,
 	$post_type_name,
@@ -233,10 +226,109 @@ function pk_create_custom_post_type() {
 	}
 
 	$all_posts = get_option( $pk_custom_post_types_options );
-	pk_create_post_types( $all_posts );
+
+	foreach ($all_posts as $post) {
+
+		$post_name 			= $post[ $post_type_name ];
+		$post_description = $post[ $post_type_description ];
+		$post_taxonomy		= $post[ $post_type_taxonomy ];
+
+		// if a custom taxonomy is defined
+		if ( $post_taxonomy ) {
+			pk_create_custom_tax( $post_taxonomy, $post_name );
+		}
+
+		pk_create_custom_post_type( $post_name, $post_description, $post_taxonomy);
+
+		// do_action( 'registered_post_type', $post_name );
+
+		// header('Location: '.$_SERVER[ 'HTTP_REFERER' ]);
+
+	}
+
+	// do_action( 'registered_post_type', $post_name );
+	// if ( $_SERVER ) {
+	// 	var_dump( $_SERVER );
+	// }
+
 
 }
-add_action( 'init', 'pk_create_custom_post_type', 10);
+add_action( 'init', 'pk_create_custom_post_types', 10);
+
+/*
+ * Helper function to register the taxonomy
+ */
+function pk_create_custom_tax( $post_taxonomy, $post_name ) {
+
+	// @see: https://codex.wordpress.org/Function_Reference/register_taxonomy
+	register_taxonomy(
+		strtolower( $post_taxonomy ),
+		strtolower( $post_name ),
+		array(
+			'label'   					=> ucfirst( $post_taxonomy ),
+			'rewrite' 					=> array( 'slug' => strtolower( $post_taxonomy ) ),
+			'public' 					=> true,
+			'hierarchical' 			=> true,
+			'show_ui'         		=> true,
+			'show_admin_column' 		=> true,
+			'show_in_menu'				=> true,
+			'show_in_rest'				=> true,
+			'query_var'         		=> true,
+			'update_count_callback' => '_update_post_term_count',
+		)
+	);
+}
+
+/*
+ * Register the custom post type
+ */
+function pk_create_custom_post_type( $post_name, $post_description, $post_taxonomy ) {
+
+	$str_ucfirst 	= ucfirst( $post_name );
+	$str_lower		= strtolower( $post_name );
+
+	// register the post types
+	register_post_type(
+		$post_name,
+		array(
+			'label' => $post_name,
+			'labels' => array(
+				'name' 				=> __( $str_ucfirst, 'peak-theme'),
+				'singular_name' 	=> __( $str_ucfirst, 'peak-theme'),
+				'add_new_item'		=> __('Add new '.$str_lower, 'peak-theme'),
+				'edit_item'			=> __('Edit '.$str_lower, 'peak-theme'),
+				'new_item'			=> __('New '.$str_lower, 'peak-theme'),
+				'view_item'			=> __('View '.$str_lower, 'peak-theme')
+			),
+			'description' => $post_description,
+			'public' => true,
+			'has_archive' => true,
+			'hierarchical' => true,
+			'menu_icon' => 'dashicons-art',
+			'menu_position' => 15,
+			'taxonomies' => (array) $post_taxonomy,
+			'show_in_menu' => true,
+			'rewrite' => array(
+				'slug' => __( $str_lower, 'peak-theme'),
+				'with_front' => false
+			),
+			'show_in_rest' => true,
+			'supports' => array(
+				'title',
+				'editor',
+				'author',
+				'excerpt',
+				'thumbnail',
+				'trackbacks',
+				'revisions',
+				'custom-fields',
+				'page-attributes',
+				'post-formats'
+			)
+		)
+	);
+
+}
 
 /*
  * Sanitizes post data and returns an array
@@ -267,82 +359,7 @@ function pk_sanitize_entry( $entry ) {
 
 }
 
-/*
- * Register custom post types and optional custom taxonomies
- */
-function pk_create_post_types( $posts ) {
-
-	global $post_type_name, $post_type_description, $post_type_taxonomy;
-
-	foreach ($posts as $post_type) {
-
-		$post_name 			= $post_type[ $post_type_name ];
-		$post_description = $post_type[ $post_type_description ];
-		$post_taxonomy		= $post_type[ $post_type_taxonomy ];
-
-		// if a custom taxonomy is defined
-		if ( $post_taxonomy ) {
-			// @see: https://codex.wordpress.org/Function_Reference/register_taxonomy
-			register_taxonomy(
-				strtolower( $post_taxonomy ),
-				strtolower( $post_name ),
-				array(
-					'label'   					=> ucfirst( $post_taxonomy ),
-					'rewrite' 					=> array( 'slug' => strtolower( $post_taxonomy ) ),
-					'public' 					=> true,
-					'hierarchical' 			=> true,
-					'show_ui'         		=> true,
-					'show_admin_column' 		=> true,
-					'show_in_menu'				=> true,
-					'show_in_rest'				=> true,
-					'query_var'         		=> true,
-					'update_count_callback' => '_update_post_term_count',
-				)
-			);
-
-		}
-
-		// register the post types
-		register_post_type(
-			$post_name,
-			array(
-				'label' => $post_name,
-				'labels' => array(
-	 				'name' 				=> __( ucfirst( $post_name ), 'peak-theme'),
-	 				'singular_name' 	=> __( ucfirst( $post_name ), 'peak-theme'),
-	 				'add_new_item'		=> __('Add new '.strtolower( $post_name ), 'peak-theme'),
-	 				'edit_item'			=> __('Edit '.strtolower( $post_name ), 'peak-theme'),
-	 				'new_item'			=> __('New '.strtolower( $post_name ), 'peak-theme'),
-	 				'view_item'			=> __('View '.strtolower( $post_name ), 'peak-theme')
-	 			),
-	 			'description' => $post_description,
-	 			'public' => true,
-	 			'has_archive' => true,
-	 			'hierarchical' => true,
-	 			'menu_icon' => 'dashicons-art',
-	 			// 'menu_position' => 20,
-	 			'taxonomies' => $post_taxonomy,
-	 			'show_in_menu' => true,
-	 			'rewrite' => array(
-	 				'slug' => __( strtolower( $post_name ), 'peak-theme'),
-	 				'with_front' => false
-	 			),
-	 			'show_in_rest' => true,
-	 			'supports' => array(
-	 				'title',
-	 				'editor',
-	 				'author',
-	 				'excerpt',
-	 				'thumbnail',
-	 				'trackbacks',
-	 				'revisions',
-	 				'custom-fields',
-	 				'page-attributes',
-	 				'post-formats'
-	 			)
-	 		)
-	 	);
-
-	}
-
-}
+// add_action( 'registered_post_type', 'check_function');
+// function check_function( $post_name ) {
+	// echo '<meta http-equiv="refresh" />';
+// }
