@@ -21,7 +21,10 @@ $post_type_taxonomy				= 'custom-taxonomy';
  */
 function pk_load_styles() {
 	wp_register_style ( 'peak-custom-posts-styles', plugins_url ( 'css/styles.css', __FILE__ ) );
+	wp_register_script( 'peak-custom-post-types-js', plugins_url ( 'js/refresh-page.js', __FILE__ ) );
 	wp_enqueue_style( 'peak-custom-posts-styles' );
+	// make sure script loads in footer
+	wp_enqueue_script( 'peak-custom-post-types-js', null, null, null, true );
 }
 add_action( 'init', 'pk_load_styles', 9);
 
@@ -123,7 +126,7 @@ function pk_toplevel_page() {
 
 	?>
 
-	<form method="post" action="">
+	<form name="custom-post-types-form" method="post" action="">
 
 		 <!-- hidden field for security verification -->
 		 <input type="hidden" name="<?php echo $hidden_field_name; ?>" value="<?php echo $hidden_field_value ?>">
@@ -163,7 +166,7 @@ function pk_toplevel_page() {
 
 		 <!-- submit button -->
 		 <p class="submit">
-			 <input type="submit" name="Submit" class="button-primary button" value="<?php esc_attr_e( 'Create Custom Post Type', 'peak-theme'); ?>" onclick="window.location.reload();">
+			 <input type="submit" name="Submit" class="button-primary button" value="<?php esc_attr_e( 'Create Custom Post Type', 'peak-theme'); ?>">
 		 </p>
 
 	 </form>
@@ -191,7 +194,7 @@ function pk_toplevel_page() {
 					echo
 					'<li data-attr-index="'.$index.'" class="pk-post-type-list-item">'
 						.$post_type[$post_type_name].
-						' <span>('.$post_type[$post_type_taxonomy].')</span>'.
+						// ' <span>('.$post_type[$post_type_taxonomy].')</span>'.
 						'<form method="post" action="" class="alignright">
 							<input type="hidden" name="deleted-item-index" value="'.$index.'" />
 							<input type="submit" name="delete-item" value="X" onclick="return confirm(\'Are you sure you want to delete this post type?\')">
@@ -243,6 +246,8 @@ function pk_create_custom_post_types() {
 		// do_action( 'registered_post_type', $post_name );
 
 		// header('Location: '.$_SERVER[ 'HTTP_REFERER' ]);
+
+		// do_action( 'init' );
 
 	}
 
