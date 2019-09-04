@@ -1,0 +1,10 @@
+.pk-label {
+	display: block;
+	padding-left: 0px
+}
+
+.pk-label > * {
+	margin-top: 6px;
+	margin-left: -1px;
+	padding: 0.4em;
+}
