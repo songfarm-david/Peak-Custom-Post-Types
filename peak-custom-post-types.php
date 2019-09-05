@@ -20,8 +20,10 @@ $post_type_taxonomy				= 'custom-taxonomy';
  * Load plugin styles
  */
 function pk_load_styles() {
+
 	wp_register_style ( 'peak-custom-posts-styles', plugins_url ( 'css/styles.css', __FILE__ ) );
 	wp_register_script( 'peak-custom-post-types-js', plugins_url ( 'js/refresh-page.js', __FILE__ ) );
+
 	wp_enqueue_style( 'peak-custom-posts-styles' );
 	// make sure script loads in footer
 	wp_enqueue_script( 'peak-custom-post-types-js', null, null, null, true );
@@ -69,7 +71,7 @@ function pk_toplevel_page() {
 	// page header
 	echo '<div class="wrap"><h1>'.__( 'Add New Custom Post Type', 'peak-theme').'</h1>';
 
-	// verify form submission
+	// verify form submission when new post type is created
 	if ( isset( $_POST[ $hidden_field_name ] ) && $_POST[ $hidden_field_name ] == $hidden_field_value && trim( $_POST[ $post_type_name ] != "" ) ) {
 
 		 // if option not set yet
@@ -179,33 +181,15 @@ function pk_toplevel_page() {
 		echo '<p class="description">No custom post types yet!</p>';
 	} else {
 
-		$custom_post_types_data = get_option( $pk_custom_post_types_options );
-
 		// loop over array
 		echo '<h3>Created Post Types:</h3>';
 		echo '<ul class="list">';
 
-		// NOTE: put this in a function
-		$index = 0;
-		foreach ($custom_post_types_data as $post_type) {
-			foreach ($post_type as $key => $value) {
+		$custom_post_types_data = get_option( $pk_custom_post_types_options );
+		pk_create_post_types_list( $custom_post_types_data );
 
-				if ( $key == $post_type_name ) {
-					echo
-					'<li data-attr-index="'.$index.'" class="pk-post-type-list-item">'
-						.$post_type[$post_type_name].
-						// ' <span>('.$post_type[$post_type_taxonomy].')</span>'.
-						'<form method="post" action="" class="alignright">
-							<input type="hidden" name="deleted-item-index" value="'.$index.'" />
-							<input type="submit" name="delete-item" value="X" onclick="return confirm(\'Are you sure you want to delete this post type?\')">
-						</form>
-					</li>';
-				}
-			}
-			$index++;
-
-		}
 		echo '</ul>';
+
 	}
 
 	// end div class="wrap"
@@ -243,19 +227,7 @@ function pk_create_custom_post_types() {
 
 		pk_create_custom_post_type( $post_name, $post_description, $post_taxonomy);
 
-		// do_action( 'registered_post_type', $post_name );
-
-		// header('Location: '.$_SERVER[ 'HTTP_REFERER' ]);
-
-		// do_action( 'init' );
-
 	}
-
-	// do_action( 'registered_post_type', $post_name );
-	// if ( $_SERVER ) {
-	// 	var_dump( $_SERVER );
-	// }
-
 
 }
 add_action( 'init', 'pk_create_custom_post_types', 10);
@@ -336,16 +308,43 @@ function pk_create_custom_post_type( $post_name, $post_description, $post_taxono
 }
 
 /*
+ * Output post types in a list structure with option to delete single items
+ */
+function pk_create_post_types_list( $custom_posts ) {
+
+	// import global vars
+	// NOTE: $post_type_taxonomy, $post_type_description are not currently being outputted
+	global $post_type_name, $post_type_taxonomy, $post_type_description;
+	$index = 0;
+
+	foreach ( $custom_posts as $post ) {
+		foreach ( $post as $key => $value ) {
+
+			if ( $key == $post_type_name ) {
+				echo
+				'<li data-attr-index="'.$index.'" class="pk-post-type-list-item">'
+					.$post[$post_type_name].
+					'<form method="post" action="" class="alignright">
+						<input type="hidden" name="deleted-item-index" value="'.$index.'" />
+						<input type="submit" name="delete-item" value="X" onclick="return confirm(\'Are you sure you want to delete this post type?\')">
+					</form>
+				</li>';
+			}
+
+		} // end: foreach ( $post as $key => $value )
+
+		$index++;
+
+	} // end: foreach ( $custom_posts as $post )
+
+}
+
+/*
  * Sanitizes post data and returns an array
- *
- * @param {array} $_POST super global
- * @return {array} $entry_array
  */
 function pk_sanitize_entry( $entry ) {
-	global $post_type_name;
-	global $post_type_description;
-	global $post_type_taxonomy;
 
+	global $post_type_name, $post_type_description, $post_type_taxonomy;
 	$entry_array = array();
 
 	foreach ($entry as $key => $value) {
@@ -360,11 +359,7 @@ function pk_sanitize_entry( $entry ) {
 			( $value != "" ) ? $entry_array[$key] = trim($value) : $entry_array[$key] = false;
 		}
 	}
+
 	return $entry_array;
 
 }
-
-// add_action( 'registered_post_type', 'check_function');
-// function check_function( $post_name ) {
-	// echo '<meta http-equiv="refresh" />';
-// }
